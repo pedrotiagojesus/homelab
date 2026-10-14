@@ -1,0 +1,11 @@
+services:
+  custom-homepage:
+    build: .
+    container_name: homelab
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
