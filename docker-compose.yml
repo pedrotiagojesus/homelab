@@ -5,7 +5,31 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
+    depends_on:
+      - glances
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     deploy:
       resources:
         limits:
           memory: 128M
+
+  glances:
+    image: nicolargo/glances:latest
+    container_name: glances
+    restart: unless-stopped
+    pid: host
+    uts: host
+    network_mode: host
+    environment:
+      - GLANCES_OPT=-w --disable-webui
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/os-release:/etc/os-release:ro
+      - /:/rootfs:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/group:/etc/group:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M

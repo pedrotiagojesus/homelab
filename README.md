@@ -1,75 +1,28 @@
-# React + TypeScript + Vite
+# Homelab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Homepage do homelab (React + Vite + Bootstrap 5, tema escuro): relógio, informação do servidor em tempo real (via [Glances](https://github.com/nicolargo/glances)) e atalhos para os serviços.
 
-Currently, two official plugins are available:
+## Desenvolvimento
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm install
+GLANCES_URL=http://<servidor>:61208 npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Sem `GLANCES_URL`, o proxy usa `http://localhost:61208` (ex.: `glances -w` a correr localmente).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Deploy
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+./deploy.sh   # git pull + docker compose up -d --build
 ```
+
+A página fica em `http://<servidor>:8080`. O nginx encaminha `/api/` para o container `glances`.
+
+## Links dos serviços
+
+Edita [src/config/links.ts](src/config/links.ts). Cada entrada usa `port` (mesmo host da página) ou `url` absoluto.
+
+## Shelly (secção "Casa")
+
+Adiciona os dispositivos em [src/config/shellys.ts](src/config/shellys.ts) (nome, IP, `gen: 1` ou `2`). A página fala com a API local de cada Shelly através do nginx (`/shelly/<ip>/...`, só IPs privados), por isso esta secção só funciona no container, não com `npm run dev`.
