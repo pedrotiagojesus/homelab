@@ -48,3 +48,41 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
     </div>
   )
 }
+
+export interface SparklineSeries {
+  values: number[]
+  color: string
+}
+
+// Mini-gráfico em SVG. `max` fixa a escala (ex.: 100 para percentagens); sem ele, ajusta ao maior valor.
+export function Sparkline({ series, max, height = 32 }: { series: SparklineSeries[]; max?: number; height?: number }) {
+  const width = 100
+  const top = max ?? Math.max(1, ...series.flatMap((s) => s.values))
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className="w-100 d-block my-2"
+      style={{ height }}
+      aria-hidden="true"
+    >
+      {series.map(
+        (s, i) =>
+          s.values.length > 1 && (
+            <polyline
+              key={i}
+              points={s.values
+                .map((v, j) => `${(j / (s.values.length - 1)) * width},${height - 1 - (v / top) * (height - 2)}`)
+                .join(' ')}
+              fill="none"
+              stroke={s.color}
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ),
+      )}
+    </svg>
+  )
+}

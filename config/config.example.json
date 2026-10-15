@@ -1,0 +1,8 @@
+{
+  "links": [
+    { "name": "Terminal", "icon": "bi-terminal", "description": "ttyd", "port": 7681 },
+    { "name": "Base de dados", "icon": "bi-database", "description": "Adminer", "port": 8081 },
+    { "name": "Docker", "icon": "bi-box-seam", "description": "Portainer", "port": 9000 }
+  ],
+  "shellys": []
+}

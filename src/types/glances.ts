@@ -105,3 +105,13 @@ export interface GlancesProcess {
   cpu_percent: number
   memory_percent: number
 }
+
+export interface GlancesAlert {
+  begin: number
+  end: number // -1 enquanto o alerta está ativo
+  state: string // WARNING | CRITICAL
+  type: string // MEM, CPU, LOAD, FS, MEMSWAP, SENSORS, ...
+  avg: number
+  max: number
+  desc: string
+}

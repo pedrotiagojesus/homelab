@@ -1,12 +1,21 @@
 import { useGlances } from '../hooks/useGlances'
+import { useHistory } from '../hooks/useHistory'
 import { formatRate } from '../lib/format'
 import type { GlancesDiskIo, GlancesGpu, GlancesNetwork, GlancesSensor } from '../types/glances'
-import { InfoCard, Loading, Row } from './ui'
+import { InfoCard, Loading, Row, Sparkline } from './ui'
 
 // Interfaces virtuais do Docker e loopback não interessam.
 const ignoredInterface = /^(lo|veth|br-|docker)/
 // Só discos físicos inteiros (sem partições nem loop devices).
 const physicalDisk = /^(nvme\d+n\d+|sd[a-z]+|vd[a-z]+|mmcblk\d+|hd[a-z]+)$/
+
+function visibleInterfaces(entries: GlancesNetwork[]) {
+  return entries.filter((n) => !ignoredInterface.test(n.interface_name))
+}
+
+function sum(entries: GlancesNetwork[], field: 'bytes_recv_rate_per_sec' | 'bytes_sent_rate_per_sec') {
+  return visibleInterfaces(entries).reduce((total, n) => total + n[field], 0)
+}
 
 function temperatureClass(sensor: GlancesSensor) {
   // Alguns sensores reportam limites absurdos (ex.: 65261), por isso só se usam valores plausíveis.
@@ -21,7 +30,10 @@ function ServerActivity() {
   const sensors = useGlances<GlancesSensor[]>('sensors', 10000)
   const gpu = useGlances<GlancesGpu[]>('gpu', 10000)
 
-  const interfaces = (network.data ?? []).filter((n) => !ignoredInterface.test(n.interface_name))
+  const rxHistory = useHistory(network.data, (d) => sum(d, 'bytes_recv_rate_per_sec'))
+  const txHistory = useHistory(network.data, (d) => sum(d, 'bytes_sent_rate_per_sec'))
+
+  const interfaces = visibleInterfaces(network.data ?? [])
   const disks = (diskio.data ?? []).filter((d) => physicalDisk.test(d.disk_name))
   const temps = (sensors.data ?? []).filter((s) => s.type === 'temperature_core')
   const gpus = gpu.data ?? []
@@ -31,12 +43,20 @@ function ServerActivity() {
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-3">
         <InfoCard icon="bi-ethernet" title="Rede">
           {network.data ? (
-            interfaces.map((n) => (
-              <Row key={n.interface_name} label={n.interface_name}>
-                <i className="bi bi-arrow-down text-success" /> {formatRate(n.bytes_recv_rate_per_sec)}{' '}
-                <i className="bi bi-arrow-up text-info ms-1" /> {formatRate(n.bytes_sent_rate_per_sec)}
-              </Row>
-            ))
+            <>
+              <Sparkline
+                series={[
+                  { values: rxHistory, color: 'var(--bs-success)' },
+                  { values: txHistory, color: 'var(--bs-info)' },
+                ]}
+              />
+              {interfaces.map((n) => (
+                <Row key={n.interface_name} label={n.interface_name}>
+                  <i className="bi bi-arrow-down text-success" /> {formatRate(n.bytes_recv_rate_per_sec)}{' '}
+                  <i className="bi bi-arrow-up text-info ms-1" /> {formatRate(n.bytes_sent_rate_per_sec)}
+                </Row>
+              ))}
+            </>
           ) : (
             <Loading />
           )}

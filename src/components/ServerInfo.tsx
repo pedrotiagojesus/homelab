@@ -1,4 +1,5 @@
 import { useGlances } from '../hooks/useGlances'
+import { useHistory } from '../hooks/useHistory'
 import { formatBytes, formatHz } from '../lib/format'
 import type {
   GlancesCpu,
@@ -11,7 +12,7 @@ import type {
   GlancesSwap,
   GlancesSystem,
 } from '../types/glances'
-import { InfoCard, Loading, Row, Usage } from './ui'
+import { InfoCard, Loading, Row, Sparkline, Usage } from './ui'
 
 // O Glances corre num container: vê bind-mounts (/etc/hosts, ...) e a raiz do host em /rootfs.
 // Fica uma entrada por dispositivo, preferindo a de /rootfs, com o caminho real do host.
@@ -40,6 +41,8 @@ function ServerInfo() {
   const mem = useGlances<GlancesMem>('mem')
   const swap = useGlances<GlancesSwap>('memswap')
   const fs = useGlances<GlancesFs[]>('fs', 30000)
+  const cpuHistory = useHistory(cpu.data, (d) => d.total)
+  const memHistory = useHistory(mem.data, (d) => d.percent)
 
   const offline = system.error && cpu.error && mem.error
 
@@ -86,6 +89,7 @@ function ServerInfo() {
                 </div>
               )}
               <Usage percent={cpu.data.total} label="Utilização" />
+              <Sparkline series={[{ values: cpuHistory, color: 'var(--bs-primary)' }]} max={100} />
               {quicklook.data && (
                 <>
                   <div className="d-flex gap-1 mb-2" style={{ height: 24 }} title="Utilização por core">
@@ -113,6 +117,7 @@ function ServerInfo() {
           {mem.data ? (
             <>
               <Usage percent={mem.data.percent} label="RAM" />
+              <Sparkline series={[{ values: memHistory, color: 'var(--bs-primary)' }]} max={100} />
               <div className="small text-body-secondary mb-3">
                 {formatBytes(mem.data.used)} / {formatBytes(mem.data.total)}
               </div>

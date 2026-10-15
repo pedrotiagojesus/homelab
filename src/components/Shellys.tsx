@@ -1,43 +1,31 @@
-import { useCallback, useEffect, useState } from 'react'
-import { shellys, type ShellyDevice } from '../config/shellys'
-import { getShellyStatus, setShellyOn, type ShellyStatus } from '../lib/shelly'
+import { useCallback, useState } from 'react'
+import { usePolling } from '../hooks/usePolling'
+import { getShellyStatus, setShellyOn } from '../lib/shelly'
+import type { ShellyDevice } from '../types/config'
 import { Loading } from './ui'
 
 function ShellyCard({ device }: { device: ShellyDevice }) {
-  const [status, setStatus] = useState<ShellyStatus | null>(null)
-  const [error, setError] = useState(false)
+  const fetcher = useCallback((signal: AbortSignal) => getShellyStatus(device, signal), [device])
+  const { data: status, error, refresh } = usePolling(fetcher, 5000)
   const [busy, setBusy] = useState(false)
-
-  const refresh = useCallback(async () => {
-    try {
-      setStatus(await getShellyStatus(device))
-      setError(false)
-    } catch {
-      setError(true)
-    }
-  }, [device])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- primeira leitura imediata, depois polling
-    refresh()
-    const id = setInterval(refresh, 5000)
-    return () => clearInterval(id)
-  }, [refresh])
+  const [toggleError, setToggleError] = useState(false)
 
   async function toggle() {
     if (!status) return
     setBusy(true)
     try {
       await setShellyOn(device, !status.on)
-      await refresh()
+      setToggleError(false)
+      refresh()
     } catch {
-      setError(true)
+      setToggleError(true)
     } finally {
       setBusy(false)
     }
   }
 
   const on = status?.on ?? false
+  const offline = error || toggleError
 
   return (
     <div className="col">
@@ -56,13 +44,13 @@ function ShellyCard({ device }: { device: ShellyDevice }) {
                 role="switch"
                 aria-label={`Ligar/desligar ${device.name}`}
                 checked={on}
-                disabled={!status || busy || error}
+                disabled={!status || busy || !!error}
                 onChange={toggle}
               />
             </div>
           </div>
           <div className="mt-2 small">
-            {error ? (
+            {offline ? (
               <span className="text-danger">
                 <i className="bi bi-wifi-off me-1" />
                 Sem ligação
@@ -83,26 +71,28 @@ function ShellyCard({ device }: { device: ShellyDevice }) {
   )
 }
 
-function Shellys() {
+function Shellys({ devices }: { devices?: ShellyDevice[] }) {
   return (
     <section className="mb-5">
       <h2 className="h5 text-body-secondary mb-3">
         <i className="bi bi-house me-2" />
         Casa
       </h2>
-      {shellys.length === 0 ? (
+      {!devices ? (
+        <Loading />
+      ) : devices.length === 0 ? (
         <div className="card" style={{ borderStyle: 'dashed' }}>
           <div className="card-body text-center text-body-secondary py-4">
             <i className="bi bi-plug fs-2 d-block mb-2" />
             Ainda não há dispositivos Shelly configurados.
             <div className="small mt-1">
-              Adiciona-os em <code>src/config/shellys.ts</code>.
+              Adiciona-os em <code>config/config.json</code>.
             </div>
           </div>
         </div>
       ) : (
         <div className="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
-          {shellys.map((device) => (
+          {devices.map((device) => (
             <ShellyCard key={`${device.ip}-${device.channel ?? 0}`} device={device} />
           ))}
         </div>

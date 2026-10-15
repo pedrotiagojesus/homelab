@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # Fase 2: Servir os ficheiros estáticos com Nginx (super leve)
-FROM nginx:alpine
+FROM nginx:1.31-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
